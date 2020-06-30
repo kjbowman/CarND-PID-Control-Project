@@ -84,9 +84,4 @@ The lane centering (steering) control was, _by far_, the most difficult to tune.
 
 The video below demonstrates the vehicle autonomously driving a lap around the track at 25 mph using manually-tuned PID gain parameters (_K<sub>p</sub>_ ,  _K<sub>i</sub>_ ,  _K<sub>d</sub>_) = (1.925, 0.033, 58.0).
 
-<figure class="video_container">
-  <video width="640" height="480" controls="true" allowfullscreen="true"
-          poster="video/27.5_mph_1.925_0.0326_59.05.png">
-    <source src="video/27.5_mph_1.925_0.0326_59.05.mp4" type="video/mp4">
-  </video>
-</figure>
+[./video/27.5_mph_1.925_0.0326_59.05.mp4](./video/27.5_mph_1.925_0.0326_59.05.mp4)

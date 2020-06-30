@@ -8,8 +8,8 @@ PID::PID() {}
 
 PID::~PID() {}
 
-void PID::Init(double Kp_, double Ki_, double Kd_, unsigned filter_len_, 
-                double i_limit_, bool reset_i_) {
+void PID::Init(double Kp_, double Ki_, double Kd_,
+               unsigned filter_len_, double i_limit_) {
   Kp = Kp_;
   Ki = Ki_;
   Kd = Kd_;
@@ -26,8 +26,66 @@ void PID::Init(double Kp_, double Ki_, double Kd_, unsigned filter_len_,
     filter_inx = 0;
     filter_queue.resize(filter_len, 0.0);
   }
+}
 
-  reset_i = reset_i_;
+void PID::TwiddleInit(double dKp_, double dKi_, double dKd_,
+                      double best_error_, double tolerance_) {
+  dKp = dKp_;
+  dKi = dKi_;
+  dKd = dKd_;
+  best_error = best_error_;
+  
+  twiddle_tolerance = tolerance_;
+
+  twiddle_iteration = 0;
+
+  i = 0;
+  p[i] += dp[i];  // prepare for first iteration
+  twiddle_state = TwiddleState::WAIT_RUN_A;
+
+  twiddle_initialized = true;  
+}
+
+bool PID::TwiddleAdvance(double error_) {
+  bool twiddle_done = false;
+
+  switch(twiddle_state) {
+    case TwiddleState::WAIT_RUN_A:
+      if(error_ < best_error) {
+        best_error = error_;
+        dp[i] *= 1.1;
+        if((i == p.size()-1) && (dpSum() < twiddle_tolerance)) {
+          twiddle_done = true;
+        }
+        i = (i + 1) % p.size();
+        if(i == 0) twiddle_iteration++;
+        p[i] += dp[i];
+        // re-enter WAIT_RUN_A
+      } else {
+        p[i] -= 2 * dp[i];
+        twiddle_state = TwiddleState::WAIT_RUN_B;
+      }
+    break;
+
+    case TwiddleState::WAIT_RUN_B:
+      if(error_ < best_error) {
+        best_error = error_;
+        dp[i] *= 1.1;
+      } else {
+        p[i] += dp[i];
+        dp[i] *= 0.9;
+      }
+      if((i == p.size()-1) && (dpSum() < twiddle_tolerance)) {
+        twiddle_done = true;
+      }
+      i = (i + 1) % p.size();
+      if(i == 0) twiddle_iteration++;
+      p[i] += dp[i];
+      twiddle_state = TwiddleState::WAIT_RUN_A;
+    break;
+  } // end switch(twiddle_state)
+
+  return twiddle_done;
 }
 
 void PID::UpdateError(double err) {
@@ -54,14 +112,14 @@ void PID::UpdateError(double err) {
     i_error = i_limit;
   }
   
-  // reset integral on zero crossing
-  if(reset_i) {
-    if(err_prev * err_filt < 0.0) {
-      i_error = 0;
-    }
-  }
-
   err_prev = err_filt;
+}
+
+void PID::Reset() {
+  i_error = 0.0;
+  err_prev = 0.0;
+  filter_inx = 0;
+  std::fill(filter_queue.begin(),filter_queue.end(), 0.0);
 }
 
 double PID::ControlOutput() {

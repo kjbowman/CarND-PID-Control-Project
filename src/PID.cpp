@@ -1,4 +1,4 @@
-#include <strstream>
+#include <sstream> 
 #include <iomanip>
 #include <numeric>
 #include "PID.h"
@@ -88,7 +88,7 @@ bool PID::TwiddleAdvance(double error_) {
   return twiddle_done;
 }
 
-void PID::UpdateError(double err) {
+double PID::Update(double err) {
   double err_filt;
   
   if(filter_len > 1) {
@@ -113,6 +113,8 @@ void PID::UpdateError(double err) {
   }
   
   err_prev = err_filt;
+
+  return p_error + d_error + i_error;
 }
 
 void PID::Reset() {
@@ -122,12 +124,8 @@ void PID::Reset() {
   std::fill(filter_queue.begin(),filter_queue.end(), 0.0);
 }
 
-double PID::ControlOutput() {
-  return p_error + d_error + i_error;
-}
-
 std::string PID::debug_string() {
-  std::strstream str;
+  std::stringstream str;
   str << std::setprecision(5) << std::fixed << std::showpoint;
   str << "P, " << std::setw(8) << p_error << ",  "
       << "I, " << std::setw(8) << i_error << ",  "

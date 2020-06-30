@@ -45,25 +45,15 @@ class PID {
   bool TwiddleAdvance(double error_);
 
   /**
-   * return the sum of the Twiddler paremter deltas
-   */
-  double dpSum() { return dKp + dKi + dKd; }
-
-  /**
-   * Update the PID error variables given cross track error.
+   * Update the PID error variables given error and returns the control output.
    * @param cte The current cross track error
    */
-  void UpdateError(double err);
+  double Update(double err);
 
   /**
    * Reset the integrator and other "history"
    */
   void Reset();
-
-  /**
-   * Calculate the total PID error.
-   */
-  double ControlOutput();
 
   /**
    * formats the current p, i, & d errors into a string for printing
@@ -93,6 +83,11 @@ class PID {
   double twiddle_tolerance;
 
  private:
+
+  /**
+   * return the sum of the Twiddler paremter deltas
+   */
+  double dpSum() { return dKp + dKi + dKd; }
 
   /**
    * PID Errors

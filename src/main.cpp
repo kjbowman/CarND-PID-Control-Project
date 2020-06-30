@@ -4,8 +4,7 @@
 #include <iomanip>
 #include <string>
 #include <cmath>
-// #include <chrono>
-#include <ctime>
+#include <chrono>
 #include "json.hpp"
 #include "PID.h"
 
@@ -179,8 +178,7 @@ int main() {
 
           if(step_count > 0) {  // if the simulation was just reset, ignore the first step
             err = -cte;
-            center_pid.UpdateError(err);
-            set_point = center_pid.ControlOutput();
+            set_point = center_pid.Update(err);
             if(set_point > 25.0) {
               set_point = 25.0;
             }
@@ -189,8 +187,7 @@ int main() {
             }
 
             err = set_point - angle;
-            sp_pid.UpdateError(err);
-            steer_value = sp_pid.ControlOutput();
+            steer_value = sp_pid.Update(err);
             if(steer_value > 1.0) {
               steer_value = 1.0;
             }
@@ -199,8 +196,7 @@ int main() {
             }
 
             err = set_speed - speed;
-            v_pid.UpdateError(err);
-            throttle_setpt = v_pid.ControlOutput();
+            throttle_setpt = v_pid.Update(err);
             if(throttle_setpt > 1.0) {
               throttle_setpt = 1.0;
             }
@@ -209,8 +205,7 @@ int main() {
             }
 
             err = throttle_setpt - throttle;
-            th_pid.UpdateError(err);
-            throttle_value = th_pid.ControlOutput();
+            throttle_value = th_pid.Update(err);
             if(throttle_value > 1.0) {
               throttle_value = 1.0;
             }

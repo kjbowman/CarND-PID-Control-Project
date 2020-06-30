@@ -65,7 +65,7 @@ From the ultimate gain *K<sub>u</sub>* and the ocillation period *T<sub>u</sub>*
 In practice, I found it difficult to measure the oscillation period accurately, so the resulting response exhibits a small amount of overshoot.
 
 > **Note:** The nominal simulation step period is 20 ms. Using `std::chrono::high_resolution_clock` to check the time between simulation cycles showed many longer cycles (about 300 ms) interspersed with seemingly random frequency. The graph below shows simulation cycle times superimposed on the cross-track error for a typical run (ending when the vehicle loses control and leaves the track). The effect of longer cycle can be seen as a discontinuity in the CTE measurement. This might just be a Windows-specific artifact - I was unable to test in any other environment.
-![](data/CTE_vs_dt.png)
+![Simulator sample time jitter](data/27.5_mph_1.925_0.0326_59.05.png)
 
 After tuning the steering control well enough to get through the first curve, the speed control could be fine-tuned for better response at higher speeds using the Twiddle algorithm.
 
@@ -86,7 +86,7 @@ The video below demonstrates the vehicle autonomously driving a lap around the t
 
 <figure class="video_container">
   <video width="640" height="480" controls="true" allowfullscreen="true"
-          poster="video/25 mph 1.925 0.033 58.png">
-    <source src="video/25 mph 1.925 0.033 58.mp4" type="video/mp4">
+          poster="video/27.5_mph_1.925_0.0326_59.05.png">
+    <source src="video/27.5_mph_1.925_0.0326_59.05.mp4" type="video/mp4">
   </video>
 </figure>

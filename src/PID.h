@@ -30,6 +30,18 @@ class PID {
             unsigned filter_len_, double i_limit_);
 
   /**
+   * Update the PID error variables given error and returns the control output.
+   * @param cte The current cross track error
+   */
+  double Update(double err);
+  double Update(double err, double dt);
+
+  /**
+   * Reset the integrator and other "history"
+   */
+  void Reset();
+
+  /**
    * Initialize the Twiddler
    * @param (dKp_, dKi_, dKd_)
    * @param best_error_ the sum of squares error from the first run
@@ -43,17 +55,6 @@ class PID {
    * @param error_
    */
   bool TwiddleAdvance(double error_);
-
-  /**
-   * Update the PID error variables given error and returns the control output.
-   * @param cte The current cross track error
-   */
-  double Update(double err);
-
-  /**
-   * Reset the integrator and other "history"
-   */
-  void Reset();
 
   /**
    * formats the current p, i, & d errors into a string for printing

@@ -19,7 +19,7 @@ void PID::Init(double Kp_, double Ki_, double Kd_,
   d_error = 0.0;
 
   err_prev = 0.0;
-  i_limit = i_limit_;
+  i_limit = i_limit_/Ki;
 
   filter_len = filter_len_;
   if(filter_len > 1) {
@@ -27,6 +27,77 @@ void PID::Init(double Kp_, double Ki_, double Kd_,
     filter_queue.resize(filter_len, 0.0);
   }
 }
+
+double PID::Update(double err) {
+  double err_filt;
+  
+  if(filter_len > 1) {
+    filter_queue[filter_inx++] = err;
+    filter_inx %= filter_len;
+    err_filt = std::accumulate(filter_queue.begin(), filter_queue.end(), 0.0)
+              / filter_len;
+  } else {
+    err_filt = err;
+  }
+
+  p_error = Kp * err_filt;
+  d_error = Kd * (err_filt - err_prev); 
+  i_error += Ki * err_filt;
+  
+  // anti-windup: clamp the integral
+  if(i_error < -i_limit) {
+    i_error = -i_limit;
+  }
+  if(i_error > i_limit) {
+    i_error = i_limit;
+  }
+  
+  err_prev = err_filt;
+
+  return p_error + d_error + i_error;
+}
+
+double PID::Update(double err_, double dt_) {
+  double err;
+  
+  if(filter_len > 1) {
+    filter_queue[filter_inx++] = err_;
+    filter_inx %= filter_len;
+    err = std::accumulate(filter_queue.begin(), filter_queue.end(), 0.0)
+        / filter_len;
+  } else {
+    err = err_;
+  }
+
+  p_error = err;
+
+  if(dt_ < 0.0001) {  // div 0 protection
+    d_error = 0.0;
+  } else {
+    d_error = (err - err_prev) / dt_;
+  }
+
+  i_error += dt_ * err;
+  // anti-windup: clamp the integral
+  if(i_error < -i_limit) {
+    i_error = -i_limit;
+  }
+  if(i_error > i_limit) {
+    i_error = i_limit;
+  }
+
+  err_prev = err;
+
+  return (Kp * err) + (Ki * i_error) + (Kd * d_error);
+}
+
+void PID::Reset() {
+  i_error = 0.0;
+  err_prev = 0.0;
+  filter_inx = 0;
+  std::fill(filter_queue.begin(),filter_queue.end(), 0.0);
+}
+
 
 void PID::TwiddleInit(double dKp_, double dKi_, double dKd_,
                       double best_error_, double tolerance_) {
@@ -88,48 +159,13 @@ bool PID::TwiddleAdvance(double error_) {
   return twiddle_done;
 }
 
-double PID::Update(double err) {
-  double err_filt;
-  
-  if(filter_len > 1) {
-    filter_queue[filter_inx++] = err;
-    filter_inx %= filter_len;
-    err_filt = std::accumulate(filter_queue.begin(), filter_queue.end(), 0.0)
-              / filter_len;
-  } else {
-    err_filt = err;
-  }
-
-  p_error = Kp * err_filt;
-  d_error = Kd * (err_filt - err_prev); 
-  i_error += Ki * err_filt;
-  
-  // anti-windup: clamp the integral
-  if(i_error < -i_limit) {
-    i_error = -i_limit;
-  }
-  if(i_error > i_limit) {
-    i_error = i_limit;
-  }
-  
-  err_prev = err_filt;
-
-  return p_error + d_error + i_error;
-}
-
-void PID::Reset() {
-  i_error = 0.0;
-  err_prev = 0.0;
-  filter_inx = 0;
-  std::fill(filter_queue.begin(),filter_queue.end(), 0.0);
-}
 
 std::string PID::debug_string() {
   std::stringstream str;
   str << std::setprecision(5) << std::fixed << std::showpoint;
-  str << "P, " << std::setw(8) << p_error << ",  "
-      << "I, " << std::setw(8) << i_error << ",  "
-      << "D, " << std::setw(8) << d_error << ",  "
+  str << "P, " << std::setw(8) << p_error * Kp << ",  "
+      << "I, " << std::setw(8) << i_error * Ki << ",  "
+      << "D, " << std::setw(8) << d_error * Kd << ",  "
       << std::ends;
   return str.str();
 }

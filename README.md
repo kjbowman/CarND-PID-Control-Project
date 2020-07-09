@@ -64,9 +64,6 @@ From the ultimate gain *K<sub>u</sub>* and the ocillation period *T<sub>u</sub>*
 
 In practice, I found it difficult to measure the oscillation period accurately, so the resulting response exhibits a small amount of overshoot.
 
-> **Note:** The nominal simulation step period is 20 ms. Using `std::chrono::high_resolution_clock` to check the time between simulation cycles showed many longer cycles (about 300 ms) interspersed with seemingly random frequency. The graph below shows simulation cycle times superimposed on the cross-track error for a typical run (ending when the vehicle loses control and leaves the track). The effect of longer cycle can be seen as a discontinuity in the CTE measurement. This might just be a Windows-specific artifact - I was unable to test in any other environment.
-![Simulator sample time jitter](data/27.5_mph_1.925_0.0326_59.05.png)
-
 After tuning the steering control well enough to get through the first curve, the speed control could be fine-tuned for better response at higher speeds using the Twiddle algorithm.
 
 #### Steering Setpoint
@@ -75,13 +72,15 @@ The Steering Setpoint control was manually tuned in a manner similar to that for
 
 #### Lane Centering (Steering) Control
 
-The lane centering (steering) control was, _by far_, the most difficult to tune. It was possible to manually tune the steering control at a very low speed (e.g. with a constant throttle value of 0.2) such that the vehicle could navigate a single lap of the course _most_ times. But this manual tuning was not robust enough to guarantee a flawless lap _every_ time. Accepting the challenge of attempting higher speeds became the impetus for implementing the Twiddle algorithm. Still, finding _good enough_ values with which to seed the Twiddler was a tedious and frustrating exercise. After much trial and error and applying the twiddler at lower speeds, I attempted to use the Twiddle algorithm to tune the lane centering control at a speed of 27.5 mph, starting with the initial values of (_K<sub>p</sub>_ , _K<sub>i</sub>_ , _K<sub>d</sub>_) = (1.925, 0.033, 58.0); and corresponding delta (_dp_) values (0.1, 0.001, 1). I let each _run_ execute 1500 simulation cycles &mdash; long enough for the vehicle to travel through the two sharpest curves. After XX iterations, the Twiddler arrived at the following gain values:  
+The lane centering (steering) control was, _by far_, the most difficult to tune. It was possible to manually tune the steering control at a very low speed (e.g. with a constant throttle value of 0.2) such that the vehicle could navigate a single lap of the course _most_ times. But this manual tuning was not robust enough to guarantee a flawless lap _every_ time. Accepting the challenge of attempting higher speeds became the impetus for implementing the Twiddle algorithm. Still, finding _good enough_ values with which to seed the Twiddler was a tedious and frustrating exercise. After much trial and error and applying the twiddler at lower speeds, I attempted to use the Twiddle algorithm to tune the lane centering control at a speed of 25 mph, starting with the initial values of (_K<sub>p</sub>_ , _K<sub>i</sub>_ , _K<sub>d</sub>_) = (1, 1, 1); and corresponding delta (_dp_) values (0.5, 0.5, 0.5). I let each _run_ execute 1500 simulation cycles &mdash; long enough for the vehicle to travel through the two sharpest curves. However, at several points, the gain values for a particular cycle caused the vehicle to veer off the road and get stuck in various situations that skewed the true error. After several attempts choosing different starting values and delta values, I abandoned the Twiddle algorithm in favor of the manual tuning process.
+
+The final gain values for successfully navigating the track at 25 mph are:
 | _K<sub>p</sub>_ | _K<sub>i</sub>_ | _K<sub>p</sub>_ |
 |:-:|:-:|:-:|
-| 1.825 | 0.0336 | 59.05 |
+| 1.6 | 1.4 | 2.9 |
 
 ## Simulation
 
-The video below demonstrates the vehicle autonomously driving a lap around the track at 25 mph using manually-tuned PID gain parameters (_K<sub>p</sub>_ ,  _K<sub>i</sub>_ ,  _K<sub>d</sub>_) = (1.925, 0.033, 58.0).
+The video below demonstrates the vehicle autonomously driving a lap around the track at 25 mph using the manually-tuned PID gain parameters.
 
-[./video/27.5_mph_1.925_0.0326_59.05.mp4](./video/27.5_mph_1.925_0.0326_59.05.mp4)
+[./video/25_mph.mp4](./video/25_mph.mp4)

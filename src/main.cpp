@@ -17,8 +17,8 @@ using std::cout;
 
 // For Twiddling
 constexpr bool TWIDDLE = false;
-constexpr unsigned TW_N_SAMPLES = 1500;
-constexpr unsigned TW_SKIP_SAMPLES = 100;
+constexpr unsigned TW_N_SAMPLES = 210;
+constexpr unsigned TW_SKIP_SAMPLES = 10;
 constexpr unsigned TW_AVG_SAMPLES = TW_N_SAMPLES - TW_SKIP_SAMPLES;
 constexpr double TW_TOLERANCE = 0.001;
 
@@ -59,31 +59,32 @@ int main() {
 
   bool initialized = false;
   long step_count = 0L;
-  auto t_prev = std::chrono::high_resolution_clock::now();
+  auto t_start = std::chrono::high_resolution_clock::now();
+  auto t_prev = t_start;
 
   // lane centering control
   PID center_pid;
-  center_pid.Init(1.925, 0.0326, 59.05, 5, 25.0);
-  
+  center_pid.Init(1.6, 1.4, 2.9, 5, 25.0);
+
   // Steering set point control
   PID sp_pid;
-  sp_pid.Init(0.0064, 0.0142, 0.0022, 0, 1.0);
+  sp_pid.Init(0.002, 0.1, 0.00005, 3, 1.0);
 
   // speed control
   PID v_pid;
-  v_pid.Init(0.24, 0.007648, 1.9341, 15, 1.0);
-  double set_speed = 27.5;    // How fast do you want to go?
+  v_pid.Init(0.3, 0.4, 2.5, 10, 1.0);
+  double set_speed = 25.0;    // How fast do you want to go?
 
   // throttle control
   PID th_pid;
-  th_pid.Init(0.3, 0.5, 0, 0, 1.0);
+  th_pid.Init(0.3, 2, 0.001, 0, 1.0);
 
   PID* tw_pid = &center_pid;  // pointer to which PID you want to twiddle
 
   double twiddle_err_sum = 0.0;
 
   h.onMessage([&initialized, &step_count,
-               &center_pid, &sp_pid, &v_pid, &th_pid, &set_speed, &t_prev,
+               &center_pid, &sp_pid, &v_pid, &th_pid, &set_speed, &t_prev, &t_start,
                &tw_pid, &twiddle_err_sum]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                uWS::OpCode opCode) {
@@ -107,19 +108,23 @@ int main() {
           // auto image = j[i]["image"];  // what format?
 
           if(!initialized) {
-            t_prev = std::chrono::high_resolution_clock::now();
+            t_start = std::chrono::high_resolution_clock::now();
+            t_prev = t_start;
             initialized = true;
           }
 
           double steer_value = 0.0;
           double set_point;
+          double center_err;
           double err;
           double throttle_setpt;
           double throttle_value = 0.0;
 
           auto t_now = std::chrono::high_resolution_clock::now();
           std::chrono::duration<double> t_diff = t_now - t_prev;
+          std::chrono::duration<double> t_elapsed = t_now - t_start;
           double dt = t_diff.count();
+          double run_time = t_elapsed.count();
           t_prev = t_now;
 
           step_count++;
@@ -128,7 +133,7 @@ int main() {
           if(TWIDDLE) {
             // set the appropriate error for the twiddled pid
             // err = set_speed - speed;    // for the speed control
-            err = -cte;                 // for the lane centering control
+            err = -cte;                    // for the lane centering control
             
             cout << "\rstep:\t" << std::setw(7) << step_count  << "\t" << std::flush;
 
@@ -137,7 +142,7 @@ int main() {
             }
             if(step_count > TW_N_SAMPLES) {
               if(!tw_pid->twiddle_initialized) {
-                tw_pid->TwiddleInit(0.1, 0.001, 1.0,
+                tw_pid->TwiddleInit(0.5, 0.5, 0.5,
                                   twiddle_err_sum/TW_AVG_SAMPLES, TW_TOLERANCE);
               } else {
                 bool tw_done = tw_pid->TwiddleAdvance(twiddle_err_sum/TW_AVG_SAMPLES);
@@ -178,7 +183,8 @@ int main() {
 
           if(step_count > 0) {  // if the simulation was just reset, ignore the first step
             err = -cte;
-            set_point = center_pid.Update(err);
+            center_err = err;
+            set_point = center_pid.Update(err, dt);
             if(set_point > 25.0) {
               set_point = 25.0;
             }
@@ -187,7 +193,7 @@ int main() {
             }
 
             err = set_point - angle;
-            steer_value = sp_pid.Update(err);
+            steer_value = sp_pid.Update(err, dt);
             if(steer_value > 1.0) {
               steer_value = 1.0;
             }
@@ -196,7 +202,7 @@ int main() {
             }
 
             err = set_speed - speed;
-            throttle_setpt = v_pid.Update(err);
+            throttle_setpt = v_pid.Update(err, dt);
             if(throttle_setpt > 1.0) {
               throttle_setpt = 1.0;
             }
@@ -205,7 +211,7 @@ int main() {
             }
 
             err = throttle_setpt - throttle;
-            throttle_value = th_pid.Update(err);
+            throttle_value = th_pid.Update(err, dt);
             if(throttle_value > 1.0) {
               throttle_value = 1.0;
             }
@@ -221,18 +227,19 @@ int main() {
                   << std::showpoint;
             cout  << "step, "         << std::setw(7) << step_count     << ", "
                   << "dt, "           << std::setw(9) << dt             << ", "
-                  << "cte, "          << std::setw(9) << cte            << ", "
+                  << "t, "            << std::setw(9) << run_time       << ", "
+                  << "cte, "          << std::setw(9) << -center_err    << ", "
                   << "steer angle, "  << std::setw(9) << angle          << ", "
-                  // << "speed, "        << std::setw(9) << speed          << ", "
+                  << "speed, "        << std::setw(9) << speed          << ", "
                   // << "throttle, "     << std::setw(9) << throttle       << ", "
                   << "steer setpt, "  << std::setw(9) << set_point      << ", "
-                  << "steer cmd, "    << std::setw(9) << steer_value    << ", "
+                  << "steer cmd, "    << std::setw(9) << steer_value*25    << ", "
                   // << "throttle setpt, "  << std::setw(9) << throttle_setpt  << ", "
                   // << "throttle cmd, " << std::setw(9) << throttle_value  << ", "
-                  // << center_pid.debug_string()
+                  << center_pid.debug_string()
                   << std::endl;
           }
- 
+
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;  // 0.3;

@@ -31,9 +31,9 @@ class PID {
 
   /**
    * Update the PID error variables given error and returns the control output.
-   * @param cte The current cross track error
+   * @param err The current cross track error
+   * @param dt The sample time
    */
-  double Update(double err);
   double Update(double err, double dt);
 
   /**

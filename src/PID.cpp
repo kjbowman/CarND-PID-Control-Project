@@ -28,35 +28,6 @@ void PID::Init(double Kp_, double Ki_, double Kd_,
   }
 }
 
-double PID::Update(double err) {
-  double err_filt;
-  
-  if(filter_len > 1) {
-    filter_queue[filter_inx++] = err;
-    filter_inx %= filter_len;
-    err_filt = std::accumulate(filter_queue.begin(), filter_queue.end(), 0.0)
-              / filter_len;
-  } else {
-    err_filt = err;
-  }
-
-  p_error = Kp * err_filt;
-  d_error = Kd * (err_filt - err_prev); 
-  i_error += Ki * err_filt;
-  
-  // anti-windup: clamp the integral
-  if(i_error < -i_limit) {
-    i_error = -i_limit;
-  }
-  if(i_error > i_limit) {
-    i_error = i_limit;
-  }
-  
-  err_prev = err_filt;
-
-  return p_error + d_error + i_error;
-}
-
 double PID::Update(double err_, double dt_) {
   double err;
   
